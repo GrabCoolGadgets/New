@@ -1,3 +1,4 @@
 flask
 requests
 pyTelegramBotAPI==4.15.1
+bs4

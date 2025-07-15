@@ -4,30 +4,29 @@ from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-# Public Telegram Channel Username
-CHANNEL_USERNAME = "iPopcornApp"
+CHANNEL_URL = "https://t.me/s/iPopcornApp"
 
-@app.route("/")
+@app.route('/')
 def home():
-    return "✅ iPopcorn Telegram Scraper Running!"
+    return 'Telegram Scraper Running ✅'
 
-@app.route("/posts")
+@app.route('/posts')
 def get_posts():
     try:
-        url = f"https://t.me/s/{CHANNEL_USERNAME}"
-        res = requests.get(url)
-        soup = BeautifulSoup(res.text, "html.parser")
+        response = requests.get(CHANNEL_URL)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        messages = soup.find_all('div', class_='tgme_widget_message_text')
 
-        posts = []
-        for msg in soup.select(".tgme_widget_message_text"):
+        lines = []
+        for msg in messages[:5]:  # latest 5 posts
             text = msg.get_text(separator="\n").strip()
-            if text:
-                posts.append(text)
+            lines.extend(text.splitlines())
 
-        return jsonify(posts[::-1])  # latest first
-
+        return jsonify({"data": lines})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)})
 
-if __name__ == "__main__":
-    app.run()
+if __name__ == '__main__':
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)

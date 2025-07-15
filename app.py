@@ -9,7 +9,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 MONGO_URI = os.getenv("MONGO_URI")
 
 client = MongoClient(MONGO_URI)
-db = client["iPopcorn Data"]
+db = client["iPopcorn_Data"]
 collection = db["posts"]
 
 @app.route(f'/{BOT_TOKEN}', methods=['POST'])

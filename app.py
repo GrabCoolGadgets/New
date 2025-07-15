@@ -4,11 +4,12 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-BOT_TOKEN = "6355758949:AAFF__i3fAuQEGps_gj7i-InIk9f7dNgjWM"
-GITHUB_TOKEN = os.getenv("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")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 REPO = "GrabCoolGadgets/ip"
 FILE_PATH = "allfls"
 
+# Format text
 def compress_post(text):
     lines = [line.strip() for line in text.strip().split('\n') if line.strip()]
     compressed = ""
@@ -21,6 +22,7 @@ def compress_post(text):
             compressed += line + " "
     return compressed.strip()
 
+# GitHub Update
 def update_github_file(new_entry):
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
@@ -29,6 +31,7 @@ def update_github_file(new_entry):
 
     url = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
     res = requests.get(url, headers=headers)
+
     if res.status_code != 200:
         print("❌ GitHub file fetch failed:", res.status_code, res.text)
         return False
@@ -38,46 +41,48 @@ def update_github_file(new_entry):
     existing = requests.get(content_data['download_url']).text.strip()
 
     if new_entry in existing:
-        print("⚠️ Duplicate post. Skipping.")
+        print("⚠️ Duplicate post skipped.")
         return True
 
     updated = (existing + "\n" + new_entry).strip()
-    encoded_content = updated.encode("utf-8")
-    import base64
-    base64_content = base64.b64encode(encoded_content).decode("utf-8")
+
+    from base64 import b64encode
+    encoded = b64encode(updated.encode('utf-8')).decode('utf-8')
 
     payload = {
-        "message": "Auto Update from Telegram",
-        "content": base64_content,
+        "message": "Auto Update from Telegram Bot",
+        "content": encoded,
         "sha": sha
     }
 
-    put_res = requests.put(url, headers=headers, json=payload)
-    print("=== GitHub PUT Response ===", put_res.status_code, put_res.text)
-    return put_res.status_code in [200, 201]
+    res = requests.put(url, headers=headers, json=payload)
+    print("=== GitHub PUT Response ===", res.status_code, res.text)
+    return res.status_code in [200, 201]
 
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def telegram_webhook():
     data = request.get_json()
-    if "message" in data:
-        chat_id = data["message"]["chat"]["id"]
-        if "text" in data["message"]:
-            text = data["message"]["text"]
+    chat_id = data['message']['chat']['id']
 
-            if text == "/start":
-                send_message(chat_id, "👋 Welcome to Movie Uploader Bot!")
-                return "Started", 200
+    if "text" in data['message']:
+        text = data['message']['text']
 
-            send_message(chat_id, "⏳ Uploading to GitHub...")
-            compressed = compress_post(text)
-            success = update_github_file(compressed)
-            if success:
-                send_message(chat_id, "✅ Uploaded Successfully to GitHub!")
-            else:
-                send_message(chat_id, "❌ Upload failed.")
-            return "Done", 200
+        if text == "/start":
+            send_message(chat_id, "🤖 Welcome to Auto GitHub Uploader Bot!")
+            return "OK", 200
 
-    return "No text", 200
+        send_message(chat_id, "📤 Uploading...")
+
+        compressed = compress_post(text)
+        success = update_github_file(compressed)
+
+        if success:
+            send_message(chat_id, "✅ Uploaded successfully!")
+        else:
+            send_message(chat_id, "❌ Failed to upload. Please try again later.")
+        return "Done", 200
+
+    return "No text found", 200
 
 def send_message(chat_id, text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"

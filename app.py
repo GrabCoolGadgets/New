@@ -1,67 +1,54 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from pymongo import MongoClient
-import telegram
+import datetime
 
-# --- CONFIG ---
-BOT_TOKEN = "6355758949:AAFF__i3fAuQEGps_gj7i-InIk9f7dNgjWM"
-MONGO_URI = "mongodb+srv://Ipopcorninline:Ipopcorninline@cluster0.8uues.mongodb.net/?retryWrites=true&w=majority"
-DB_NAME = "iPopcorn App"
-COLLECTION = "iPopcorn Data"
-
-bot = telegram.Bot(token=BOT_TOKEN)
 app = Flask(__name__)
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+MONGO_URI = os.getenv("MONGO_URI")
+
 client = MongoClient(MONGO_URI)
-db = client[DB_NAME]
-collection = db[COLLECTION]
+db = client["iPopcorn Data"]
+collection = db["posts"]
 
-# --- Compress post format ---
-def compress_post(text):
-    lines = [line.strip() for line in text.strip().split('\n') if line.strip()]
-    compressed = ""
-    for i, line in enumerate(lines):
-        if line.endswith("{"):
-            compressed += lines[i].replace("{", "") + "{"
-        elif line == "}":
-            compressed += "}"
-        else:
-            compressed += line + " "
-    return compressed.strip()
-
-# --- TELEGRAM WEBHOOK ---
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def telegram_webhook():
+@app.route(f'/{BOT_TOKEN}', methods=['POST'])
+def webhook():
     data = request.get_json()
-
-    if "message" in data:
+    
+    if "message" in data and "text" in data["message"]:
+        text = data["message"]["text"]
         chat_id = data["message"]["chat"]["id"]
-        if "text" in data["message"]:
-            text = data["message"]["text"]
 
-            if text == "/start":
-                bot.send_message(chat_id=chat_id, text="👋 Welcome to iPopcorn Bot!\nSend your post in the required format.")
-                return "OK", 200
+        # Handle /start
+        if text.lower() == "/start":
+            send_message(chat_id, "👋 Welcome! Send me a post in the correct format.")
+            return "ok", 200
 
-            bot.send_message(chat_id=chat_id, text="⏳ Uploading...")
-            compressed = compress_post(text)
+        send_message(chat_id, "⏳ Uploading...")
+        
+        # Insert into MongoDB
+        try:
+            collection.insert_one({
+                "text": text,
+                "timestamp": datetime.datetime.utcnow()
+            })
+            send_message(chat_id, "✅ Successfully uploaded to MongoDB!")
+        except Exception as e:
+            send_message(chat_id, "❌ Failed to upload.")
+            print("MongoDB Error:", str(e))
+        
+    return "ok", 200
 
-            if collection.find_one({"post": compressed}):
-                bot.send_message(chat_id=chat_id, text="⚠️ Post already exists.")
-            else:
-                collection.insert_one({"post": compressed})
-                bot.send_message(chat_id=chat_id, text="✅ Successfully uploaded.")
+def send_message(chat_id, text):
+    import requests
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    requests.post(url, json={"chat_id": chat_id, "text": text})
 
-            return "OK", 200
+@app.route('/')
+def home():
+    return "Bot is running!", 200
 
-    return "Ignored", 200
-
-# --- API TO FETCH POSTS ---
-@app.route("/posts", methods=["GET"])
-def get_posts():
-    data = collection.find({}, {"_id": 0})
-    posts = [doc["post"] for doc in data]
-    return jsonify({"data": posts})
-
-# --- START APP ---
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)

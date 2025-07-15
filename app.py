@@ -1,54 +1,33 @@
-import os
 from flask import Flask, request
+from telegram import Bot
 from pymongo import MongoClient
-import datetime
+from sync_mongo_to_github import format_posts, update_github_file
 
 app = Flask(__name__)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-MONGO_URI = os.getenv("MONGO_URI")
-
+BOT_TOKEN = "6355758949:AAFF__i3fAuQEGps_gj7i-InIk9f7dNgjWM"
+MONGO_URI = "mongodb+srv://Ipopcorninline:Ipopcorninline@cluster0.8uues.mongodb.net/"
 client = MongoClient(MONGO_URI)
-db = client["iPopcorn_Data"]
-collection = db["posts"]
+db = client["iPopcornApp"]
+collection = db["iPopcornData"]
 
 @app.route(f'/{BOT_TOKEN}', methods=['POST'])
-def webhook():
+def telegram_webhook():
     data = request.get_json()
-    
+
     if "message" in data and "text" in data["message"]:
-        text = data["message"]["text"]
         chat_id = data["message"]["chat"]["id"]
+        text = data["message"]["text"].strip().lower()
 
-        # Handle /start
-        if text.lower() == "/start":
-            send_message(chat_id, "👋 Welcome! Send me a post in the correct format.")
-            return "ok", 200
+        bot = Bot(token=BOT_TOKEN)
 
-        send_message(chat_id, "⏳ Uploading...")
-        
-        # Insert into MongoDB
-        try:
-            collection.insert_one({
-                "text": text,
-                "timestamp": datetime.datetime.utcnow()
-            })
-            send_message(chat_id, "✅ Successfully uploaded to MongoDB!")
-        except Exception as e:
-            send_message(chat_id, "❌ Failed to upload.")
-            print("MongoDB Error:", str(e))
-        
-    return "ok", 200
+        if text == "/start":
+            bot.send_message(chat_id, "👋 Welcome! Type /update to sync data to GitHub.")
+        elif text == "/update":
+            bot.send_message(chat_id, "🔄 Uploading to GitHub...")
+            posts = list(collection.find())
+            formatted = format_posts(posts)
+            update_github_file(formatted)
+            bot.send_message(chat_id, "✅ GitHub Updated Successfully!")
 
-def send_message(chat_id, text):
-    import requests
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": chat_id, "text": text})
-
-@app.route('/')
-def home():
-    return "Bot is running!", 200
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    return "OK", 200

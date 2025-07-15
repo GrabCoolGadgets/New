@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 # ✅ Configuration
 BOT_TOKEN = "6355758949:AAFF__i3fAuQEGps_gj7i-InIk9f7dNgjWM"
-MONGO_URI = "mongodb+srv://Ipopcorninline:Ipopcorninline@cluster0.8uues.mongodb.net/"
+MONGO_URI = "mongodb+srv://Ipopcorninline:Ipopcorninline@cluster0.8uues.mongodb.net/?retryWrites=true&w=majority"
 GITHUB_TOKEN = "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"
 REPO = "GrabCoolGadgets/ip"
 FILE_PATH = "data/posts.txt"  # GitHub repo path

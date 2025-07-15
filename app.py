@@ -1,26 +1,28 @@
-from flask import Flask, jsonify
-import requests
+import telebot
+from flask import Flask, jsonify, request
 
+BOT_TOKEN = "6355758949:AAFF__i3fAuQEGps_gj7i-InIk9f7dNgjWM"
+CHANNEL_USERNAME = "iPopcornApp"  # बस username, बिना https://t.me/
+
+bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 app = Flask(__name__)
+posts = []
 
-BOT_TOKEN = '6355758949:AAFF__i3fAuQEGps_gj7i-InIk9f7dNgjWM'
-CHANNEL_USERNAME = 'iPopcornApp'
+@bot.channel_post_handler(func=lambda message: True)
+def handle_channel_post(message):
+    if message.chat.username == CHANNEL_USERNAME:
+        text = message.text
+        posts.insert(0, text)
+        if len(posts) > 100:
+            posts.pop()
 
-@app.route('/')
+@app.route("/")
 def home():
-    return '✅ iPopcorn Movie Fetcher is Live!'
+    return "Bot is live!"
 
-@app.route('/fetch')
-def fetch():
-    url = f'https://api.telegram.org/bot{BOT_TOKEN}/getUpdates'
-    r = requests.get(url).json()
+@app.route("/posts")
+def get_posts():
+    return jsonify(posts)
 
-    movies = []
-    for result in r.get("result", []):
-        msg = result.get("message", {})
-        if msg.get("chat", {}).get("username") == CHANNEL_USERNAME:
-            text = msg.get("text", "")
-            if "{" in text and "}" in text:
-                movies.append(text.strip())
-
-    return jsonify(movies)
+if __name__ == "__main__":
+    bot.infinity_polling()

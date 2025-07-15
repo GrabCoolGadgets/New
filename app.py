@@ -3,7 +3,7 @@ import requests
 
 app = Flask(__name__)
 
-BOT_TOKEN = '6355758949:AAEXMPJ9XnIr_sS-PqM7BiUaSFOrQd02oJE'
+BOT_TOKEN = '6355758949:AAFF__i3fAuQEGps_gj7i-InIk9f7dNgjWM'
 CHANNEL_USERNAME = 'iPopcornApp'
 
 @app.route('/')

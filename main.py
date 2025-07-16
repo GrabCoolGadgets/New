@@ -37,10 +37,11 @@ def click():
     }
     return redirect(redirect_map.get(ad, "https://t.me/Click2Earning_Pro"))
 
+# ========== FLASK THREAD ==========
 def start_flask():
-    app.run(host="0.0.0.0", port=10000)
+    app.run(host="0.0.0.0", port=10000, debug=False)
 
-# ========== TELEGRAM BOT ==========
+# ========== TELEGRAM HANDLERS ==========
 @bot.message_handler(commands=["start"])
 def handle_start(message):
     user_id = message.chat.id
@@ -81,7 +82,7 @@ def handle_callback(call):
         bot.send_message(uid, msg, parse_mode="Markdown")
 
     elif call.data == "earn":
-        base_url = "https://click2earn.onrender.com"  # Replace with your actual Render URL
+        base_url = "https://click2earn.onrender.com"
         markup = telebot.types.InlineKeyboardMarkup(row_width=1)
         markup.add(
             telebot.types.InlineKeyboardButton("💸 CPM $0.10 → ₹0.02", url=f"{base_url}/click?uid={uid}&ad=cpm1"),
@@ -101,13 +102,17 @@ def handle_callback(call):
         bot.answer_callback_query(call.id)
         bot.send_message(uid, "💼 Withdraw system coming soon...")
 
-# ========== RUN FLASK + BOT ==========
+# ========== RUN BOT & SERVER THREAD ==========
 if __name__ == "__main__":
     threading.Thread(target=start_flask).start()
     print("🚀 Flask server running...")
-    while True:
-        try:
-            bot.polling(none_stop=True)
-        except Exception as e:
-            print("⚠️ Bot error:", e)
-            time.sleep(5)
+
+    def run_bot():
+        while True:
+            try:
+                bot.polling(none_stop=True)
+            except Exception as e:
+                print("⚠️ Bot crashed:", e)
+                time.sleep(5)
+
+    threading.Thread(target=run_bot).start()

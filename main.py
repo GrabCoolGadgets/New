@@ -92,7 +92,7 @@ def handle_callback(call):
         bot.send_message(uid, "👇 Choose a task to earn:", reply_markup=markup)
 
     elif call.data == "referral":
-        ref_link = f"https://t.me/Click2Earning_Pro_bot?start={uid}"
+        ref_link = f"https://t.me/Click2Earningbot?start={uid}"
         msg = f"👥 *Your Referral Link:*\n\n🔗 {ref_link}\n\n🤑 You get ₹0.10 per valid referral!"
         bot.answer_callback_query(call.id)
         bot.send_message(uid, msg, parse_mode="Markdown")

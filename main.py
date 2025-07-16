@@ -81,7 +81,7 @@ def handle_callback(call):
         bot.send_message(uid, msg, parse_mode="Markdown")
 
     elif call.data == "earn":
-        base_url = "https://tgjsn.onrender.com"  # Replace with your actual Render URL
+        base_url = "https://click2earn.onrender.com"  # Replace with your actual Render URL
         markup = telebot.types.InlineKeyboardMarkup(row_width=1)
         markup.add(
             telebot.types.InlineKeyboardButton("💸 CPM $0.10 → ₹0.02", url=f"{base_url}/click?uid={uid}&ad=cpm1"),
